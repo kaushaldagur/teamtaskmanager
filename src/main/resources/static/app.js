@@ -150,48 +150,91 @@ const hydrate = async () => {
 const renderAuth = () => {
   app.innerHTML = `
     <main class="auth-page">
-      <section class="auth-copy">
-        <div class="brand large"><span class="brand-mark">E</span><div><strong>Ethara</strong><small>Manager</small></div></div>
-        <p class="eyebrow">Collaborate. Track. Deliver.</p>
-        <h1>Run projects like a real product team.</h1>
-        <p>Ethara Manager brings role-based delivery, team visibility, Kanban task tracking, and executive analytics into one focused workspace.</p>
-        <div class="auth-metrics">
-          <span><strong>Roles</strong> Admin/member workflows</span>
-          <span><strong>Insights</strong> Delivery analytics</span>
-          <span><strong>Kanban</strong> Visual task tracking</span>
-        </div>
-      </section>
-      <section class="auth-card">
-        <div class="tabs">
-          <button class="tab active" data-auth-tab="login" type="button">Login</button>
-          <button class="tab" data-auth-tab="signup" type="button">Signup</button>
-        </div>
-        <form id="loginForm" class="auth-form">
-          <label><span>Email</span><input name="email" type="email" placeholder="you@ethara.dev" required></label>
-          <label><span>Password</span><input name="password" type="password" placeholder="Enter password" required></label>
-          <button class="primary-btn" type="submit">Login to workspace</button>
-        </form>
-        <form id="signupForm" class="auth-form hidden">
-          <label><span>Name</span><input name="name" type="text" value="Kaushal Dagur" required></label>
-          <label><span>Email</span><input name="email" type="email" placeholder="you@ethara.dev" required></label>
-          <label><span>Password</span><input name="password" type="password" minlength="6" placeholder="Minimum 6 characters" required></label>
-          <label><span>Role</span><select name="role"><option>MEMBER</option><option>ADMIN</option></select></label>
-          <button class="primary-btn" type="submit">Create account</button>
-        </form>
-      </section>
+      <div class="auth-shell">
+        <section class="auth-visual" aria-hidden="true">
+          <div class="auth-stripe"></div>
+          <div class="auth-visual-body">
+            <div class="auth-visual-mark">E</div>
+            <p class="eyebrow">Collaborate · track · deliver</p>
+            <h2 class="auth-visual-title">Ethara Manager</h2>
+            <p class="auth-visual-copy">Role-based projects, Kanban tasks, and delivery analytics in one calm workspace.</p>
+            <ul class="auth-visual-bullets">
+              <li>Admin &amp; member workflows</li>
+              <li>Live task board &amp; filters</li>
+              <li>JWT-secured API</li>
+            </ul>
+          </div>
+        </section>
+        <section class="auth-panel">
+          <header class="auth-panel-head">
+            <h1 class="auth-form-title" data-auth-form-title>Log in</h1>
+            <p class="auth-form-lede" data-auth-form-lede>Welcome back — sign in to open your workspace.</p>
+          </header>
+          <div class="tabs auth-tabs" role="tablist" aria-label="Account">
+            <button class="tab active" data-auth-tab="login" type="button" role="tab" aria-selected="true">Log in</button>
+            <button class="tab" data-auth-tab="signup" type="button" role="tab" aria-selected="false">Sign up</button>
+          </div>
+          <form id="loginForm" class="auth-form">
+            <label class="auth-field"><span>Email</span><input name="email" type="email" autocomplete="email" placeholder="you@company.com" required></label>
+            <label class="auth-field"><span>Password</span><input name="password" type="password" autocomplete="current-password" placeholder="••••••••" required></label>
+            <button class="primary-btn auth-submit" type="submit">Continue</button>
+          </form>
+          <form id="signupForm" class="auth-form hidden">
+            <label class="auth-field"><span>Name</span><input name="name" type="text" autocomplete="name" placeholder="Your name" required></label>
+            <label class="auth-field"><span>Email</span><input name="email" type="email" autocomplete="email" placeholder="you@company.com" required></label>
+            <label class="auth-field"><span>Password</span><input name="password" type="password" autocomplete="new-password" minlength="6" placeholder="At least 6 characters" required></label>
+            <label class="auth-field"><span>Role</span><select name="role"><option value="MEMBER">Member</option><option value="ADMIN">Admin</option></select></label>
+            <button class="primary-btn auth-submit" type="submit">Create account</button>
+          </form>
+          <p class="auth-switch" data-auth-switch-login>
+            <span>New here?</span>
+            <button type="button" class="auth-switch-btn" data-auth-switch="signup">Create an account</button>
+          </p>
+          <p class="auth-switch hidden" data-auth-switch-signup>
+            <span>Already have an account?</span>
+            <button type="button" class="auth-switch-btn" data-auth-switch="login">Log in</button>
+          </p>
+        </section>
+      </div>
     </main>
   `;
   bindAuth();
 };
 
+const setAuthTabMode = (mode) => {
+  const isLogin = mode === "login";
+  document.querySelectorAll("[data-auth-tab]").forEach((tab) => {
+    tab.classList.toggle("active", tab.dataset.authTab === mode);
+    tab.setAttribute("aria-selected", String(tab.dataset.authTab === mode));
+  });
+  document.querySelector("#loginForm").classList.toggle("hidden", !isLogin);
+  document.querySelector("#signupForm").classList.toggle("hidden", isLogin);
+  const title = document.querySelector("[data-auth-form-title]");
+  const lede = document.querySelector("[data-auth-form-lede]");
+  if (title) {
+    title.textContent = isLogin ? "Log in" : "Sign up";
+  }
+  if (lede) {
+    lede.textContent = isLogin
+      ? "Welcome back — sign in to open your workspace."
+      : "Create your account to join projects and track tasks with your team.";
+  }
+  const rowLogin = document.querySelector("[data-auth-switch-login]");
+  const rowSignup = document.querySelector("[data-auth-switch-signup]");
+  if (rowLogin && rowSignup) {
+    rowLogin.classList.toggle("hidden", !isLogin);
+    rowSignup.classList.toggle("hidden", isLogin);
+  }
+};
+
 const bindAuth = () => {
   document.querySelectorAll("[data-auth-tab]").forEach((button) => {
     button.addEventListener("click", () => {
-      const isLogin = button.dataset.authTab === "login";
-      document.querySelectorAll("[data-auth-tab]").forEach((tab) => tab.classList.toggle("active", tab === button));
-      document.querySelector("#loginForm").classList.toggle("hidden", !isLogin);
-      document.querySelector("#signupForm").classList.toggle("hidden", isLogin);
+      setAuthTabMode(button.dataset.authTab);
     });
+  });
+  document.querySelectorAll("[data-auth-switch]").forEach((btn) => {
+    btn.addEventListener("click", () => setAuthTabMode(btn.dataset.authSwitch));
   });
 
   document.querySelector("#loginForm").addEventListener("submit", async (event) => {
