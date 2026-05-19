@@ -16,13 +16,27 @@ public interface TaskRepository extends JpaRepository<Task, Long> {
 			and (:status is null or t.status = :status)
 			and (:priority is null or t.priority = :priority)
 			and (:assigneeId is null or t.assignedTo.id = :assigneeId)
-			and (:search is null or (
-				lower(t.title) like lower(concat('%', :search, '%'))
-				or lower(t.description) like lower(concat('%', :search, '%'))
-			))
 			order by t.dueDate asc, t.priority desc
 			""")
-	List<Task> search(
+	List<Task> searchFiltered(
+			@Param("userId") Long userId,
+			@Param("status") TaskStatus status,
+			@Param("priority") TaskPriority priority,
+			@Param("assigneeId") Long assigneeId);
+
+	@Query("""
+			select t from Task t
+			where (:userId is null or t.assignedTo.id = :userId)
+			and (:status is null or t.status = :status)
+			and (:priority is null or t.priority = :priority)
+			and (:assigneeId is null or t.assignedTo.id = :assigneeId)
+			and (
+				lower(t.title) like lower(concat('%', :search, '%'))
+				or lower(t.description) like lower(concat('%', :search, '%'))
+			)
+			order by t.dueDate asc, t.priority desc
+			""")
+	List<Task> searchFilteredWithText(
 			@Param("userId") Long userId,
 			@Param("status") TaskStatus status,
 			@Param("priority") TaskPriority priority,

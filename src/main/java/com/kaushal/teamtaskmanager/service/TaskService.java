@@ -54,10 +54,11 @@ public class TaskService {
 	public List<TaskResponse> search(TaskStatus status, TaskPriority priority, Long assigneeId, String search) {
 		User user = currentUserService.user();
 		Long scopedUserId = user.getRole() == Role.ADMIN ? null : user.getId();
-		return taskRepository.search(scopedUserId, status, priority, assigneeId, blankToNull(search))
-				.stream()
-				.map(TaskResponse::from)
-				.toList();
+		String term = blankToNull(search);
+		var tasks = term == null
+				? taskRepository.searchFiltered(scopedUserId, status, priority, assigneeId)
+				: taskRepository.searchFilteredWithText(scopedUserId, status, priority, assigneeId, term);
+		return tasks.stream().map(TaskResponse::from).toList();
 	}
 
 	@Transactional(readOnly = true)

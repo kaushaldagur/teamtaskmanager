@@ -30,7 +30,7 @@ public class DashboardService {
 	public DashboardResponse dashboard() {
 		User current = currentUserService.user();
 		Long scopedUserId = current.getRole() == Role.ADMIN ? null : current.getId();
-		var tasks = taskRepository.search(scopedUserId, null, null, null, null);
+		var tasks = taskRepository.searchFiltered(scopedUserId, null, null, null);
 		long total = tasks.size();
 		long completed = tasks.stream().filter(task -> task.getStatus() == TaskStatus.DONE).count();
 		long overdue = tasks.stream()
