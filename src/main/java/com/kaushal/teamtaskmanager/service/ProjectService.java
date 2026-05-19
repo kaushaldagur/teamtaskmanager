@@ -81,6 +81,24 @@ public class ProjectService {
 
 	@Transactional
 	@PreAuthorize("hasRole('ADMIN')")
+	public ProjectResponse update(Long id, ProjectRequest request) {
+		Project project = findProject(id);
+		User creator = project.getCreatedBy();
+		var members = new LinkedHashSet<>(userRepository.findAllById(request.memberIds()));
+		if (members.size() != request.memberIds().size()) {
+			throw new ApiException(HttpStatus.BAD_REQUEST, "One or more team members do not exist");
+		}
+		members.add(creator);
+		project.setName(request.name());
+		project.setDescription(request.description());
+		project.setDeadline(request.deadline());
+		project.getMembers().clear();
+		project.getMembers().addAll(members);
+		return toResponse(projectRepository.save(project));
+	}
+
+	@Transactional
+	@PreAuthorize("hasRole('ADMIN')")
 	public void delete(Long id) {
 		Project project = findProject(id);
 		taskRepository.deleteByProjectId(project.getId());

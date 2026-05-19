@@ -402,6 +402,7 @@ const renderProjects = () => `
     </article>
     ${isAdmin() ? createProjectForm() : permissionPanel("Only admins can create projects.")}
   </section>
+  ${isAdmin() ? editProjectDialog() : ""}
 `;
 
 const renderTasks = () => `
@@ -615,11 +616,36 @@ const projectCard = (project) => `
       <span class="pill">${project.members.length} members</span>
       <span class="pill">${project.deadline}</span>
     </div>
-    ${isAdmin() ? `<div class="card-actions"><span class="pill">Owner ${escapeHtml(project.createdBy.name)}</span><button class="icon-btn danger" data-delete-project="${project.id}" type="button" title="Delete project">Delete</button></div>` : ""}
+    ${isAdmin() ? `
+      <div class="card-actions project-card-actions">
+        <div class="card-actions-left">
+          <span class="pill" title="Project creator">Admin · ${escapeHtml(project.createdBy.name)}</span>
+          <button class="icon-btn" data-edit-project="${project.id}" type="button" title="Edit project">Edit</button>
+        </div>
+        <button class="icon-btn danger" data-delete-project="${project.id}" type="button" title="Delete project">Delete</button>
+      </div>` : ""}
   </article>
 `;
 
 const permissionPanel = (message) => `<article class="panel side-note"><p class="eyebrow">Access control</p><h3>${escapeHtml(message)}</h3></article>`;
+
+const editProjectDialog = () => `
+  <dialog id="projectEditDialog" class="app-dialog">
+    <form id="projectEditForm" class="stack-form">
+      <input type="hidden" name="id" id="projectEditId">
+      <p class="eyebrow">Admin</p>
+      <h3 class="dialog-title">Edit project</h3>
+      <input name="name" id="projectEditName" placeholder="Project name" required>
+      <textarea name="description" id="projectEditDescription" placeholder="Description" required></textarea>
+      <input name="deadline" id="projectEditDeadline" type="date" required>
+      <select name="memberIds" id="projectEditMembers" multiple required></select>
+      <div class="dialog-actions">
+        <button class="ghost-btn" type="button" data-close-project-edit>Cancel</button>
+        <button class="primary-btn" type="submit">Save changes</button>
+      </div>
+    </form>
+  </dialog>
+`;
 
 const createProjectForm = () => `
   <article class="panel">
@@ -770,6 +796,57 @@ const bindViewControls = () => {
         notify(error.message, "error");
       }
     });
+  });
+
+  document.querySelectorAll("[data-edit-project]").forEach((button) => {
+    button.addEventListener("click", () => {
+      const project = state.projects.find((item) => String(item.id) === String(button.dataset.editProject));
+      const dialog = document.querySelector("#projectEditDialog");
+      const form = document.querySelector("#projectEditForm");
+      const membersSelect = document.querySelector("#projectEditMembers");
+      if (!project || !dialog || !form || !membersSelect) {
+        return;
+      }
+      form.reset();
+      document.querySelector("#projectEditId").value = project.id;
+      document.querySelector("#projectEditName").value = project.name;
+      document.querySelector("#projectEditDescription").value = project.description;
+      document.querySelector("#projectEditDeadline").value = project.deadline;
+      membersSelect.innerHTML = state.users.map((user) => {
+        const selected = project.members.some((member) => member.id === user.id) ? " selected" : "";
+        return `<option value="${user.id}"${selected}>${escapeHtml(user.name)} · ${user.role}</option>`;
+      }).join("");
+      dialog.showModal();
+    });
+  });
+
+  document.querySelector("[data-close-project-edit]")?.addEventListener("click", () => {
+    document.querySelector("#projectEditDialog")?.close();
+  });
+
+  document.querySelector("#projectEditForm")?.addEventListener("submit", async (event) => {
+    event.preventDefault();
+    const form = event.currentTarget;
+    const id = document.querySelector("#projectEditId").value;
+    const fd = new FormData(form);
+    const memberIds = Array.from(form.memberIds.selectedOptions).map((option) => Number(option.value));
+    try {
+      await api(`/api/projects/${id}`, {
+        method: "PUT",
+        body: JSON.stringify({
+          name: fd.get("name"),
+          description: fd.get("description"),
+          deadline: fd.get("deadline"),
+          memberIds
+        })
+      });
+      document.querySelector("#projectEditDialog")?.close();
+      notify("Project updated", "success");
+      await hydrate();
+    }
+    catch (error) {
+      notify(error.message, "error");
+    }
   });
 
   document.querySelectorAll("[data-delete-user]").forEach((button) => {

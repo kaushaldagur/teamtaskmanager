@@ -10,12 +10,12 @@ Ethara Manager is a production-shaped Spring Boot SaaS dashboard for team projec
 - Role-based access control for `ADMIN` and `MEMBER`
 - SQL relational model for users, projects, project members, and tasks
 - Validated REST APIs for auth, dashboard, projects, tasks, and team users
-- Admin workflows: create projects, manage project members, create/delete tasks
+- Admin workflows: create and edit projects, manage project members, create/delete tasks
 - Member workflows: view assigned/project work and update own task progress
 - Dashboard data for stat cards, charts, activity feed, deadlines, and team performance
 - Responsive dashboard UI with native drag-and-drop Kanban status updates
 - Dark/light theme toggle with local preference persistence
-- Admin workflows: add/remove team members, create/delete projects, create/delete tasks
+- Admin workflows: add/remove team members, create/edit/delete projects, create/delete tasks
 - Seeded demo workspace so the product feels real on first run
 
 ## Demo Accounts
@@ -31,6 +31,10 @@ password123
 | ADMIN | admin@ethara.dev |
 | MEMBER | rohan@ethara.dev |
 | MEMBER | anaya@ethara.dev |
+
+## Demo walkthrough script
+
+For a step-by-step narrator script (screen recording or live demo), see [docs/DEMO_SCRIPT.md](docs/DEMO_SCRIPT.md).
 
 ## Run Locally
 
@@ -76,6 +80,7 @@ Admin only:
 - `POST /api/users`
 - `DELETE /api/users/{id}`
 - `POST /api/projects`
+- `PUT /api/projects/{id}`
 - `DELETE /api/projects/{id}`
 - `POST /api/projects/{id}/members`
 - `DELETE /api/projects/{id}/members/{userId}`

@@ -810,6 +810,52 @@ h3 {
   justify-content: space-between;
 }
 
+.project-card-actions {
+  margin-top: 4px;
+}
+
+.card-actions-left {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+  min-width: 0;
+}
+
+.app-dialog {
+  max-width: min(440px, 92vw);
+  width: 100%;
+  padding: 0;
+  border: 1px solid rgba(148, 163, 184, 0.22);
+  border-radius: 16px;
+  background: var(--panel-strong);
+  color: var(--text);
+  box-shadow: 0 24px 80px rgba(0, 0, 0, 0.45);
+}
+
+.app-dialog::backdrop {
+  background: rgba(2, 6, 23, 0.62);
+  backdrop-filter: blur(4px);
+}
+
+.app-dialog .stack-form {
+  padding: 22px 22px 20px;
+}
+
+.dialog-title {
+  margin: 0 0 14px;
+  font-size: 1.15rem;
+  font-weight: 750;
+}
+
+.dialog-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  justify-content: flex-end;
+  margin-top: 6px;
+}
+
 .priority-URGENT {
   background: rgba(251, 113, 133, 0.18);
   color: #fecdd3;
@@ -1124,6 +1170,15 @@ html[data-theme="light"] .workspace-card span {
 
 html[data-theme="light"] .workspace-card strong {
   color: var(--text);
+}
+
+html[data-theme="light"] .app-dialog {
+  border-color: rgba(51, 65, 85, 0.18);
+  box-shadow: 0 24px 60px rgba(15, 23, 42, 0.16);
+}
+
+html[data-theme="light"] .app-dialog::backdrop {
+  background: rgba(15, 23, 42, 0.38);
 }
 
 @media (max-width: 1180px) {
