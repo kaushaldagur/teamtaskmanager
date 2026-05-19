@@ -50,11 +50,12 @@ const applyTheme = () => {
 applyTheme();
 
 const api = async (path, options = {}) => {
+  const isAuthRequest = path.startsWith("/api/auth/");
   const response = await fetch(path, {
     ...options,
     headers: {
       "Content-Type": "application/json",
-      ...(state.token ? { Authorization: `Bearer ${state.token}` } : {}),
+      ...(state.token && !isAuthRequest ? { Authorization: `Bearer ${state.token}` } : {}),
       ...options.headers
     }
   });
