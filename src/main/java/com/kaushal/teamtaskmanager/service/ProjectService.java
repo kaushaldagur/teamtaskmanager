@@ -79,6 +79,14 @@ public class ProjectService {
 		project.getMembers().removeIf(member -> member.getId().equals(userId));
 	}
 
+	@Transactional
+	@PreAuthorize("hasRole('ADMIN')")
+	public void delete(Long id) {
+		Project project = findProject(id);
+		taskRepository.deleteByProjectId(project.getId());
+		projectRepository.delete(project);
+	}
+
 	Project findProject(Long id) {
 		return projectRepository.findById(id)
 				.orElseThrow(() -> new ApiException(HttpStatus.NOT_FOUND, "Project not found"));

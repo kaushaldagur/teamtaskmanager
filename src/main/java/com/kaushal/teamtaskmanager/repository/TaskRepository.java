@@ -37,6 +37,10 @@ public interface TaskRepository extends JpaRepository<Task, Long> {
 
 	List<Task> findByProjectIdOrderByDueDateAsc(Long projectId);
 
+	void deleteByProjectId(Long projectId);
+
+	void deleteByAssignedToId(Long assignedToId);
+
 	long countByAssignedToId(Long assignedToId);
 
 	long countByAssignedToIdAndStatus(Long assignedToId, TaskStatus status);

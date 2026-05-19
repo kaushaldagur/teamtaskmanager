@@ -13,7 +13,8 @@ const state = {
   search: "",
   status: "ALL",
   priority: "ALL",
-  selectedProject: "ALL"
+  selectedProject: "ALL",
+  theme: localStorage.getItem("etharaTheme") || "dark"
 };
 
 if (state.user?.email === adminCredentials?.email && state.user.name !== "Kaushal Dagur") {
@@ -37,9 +38,16 @@ const columns = [
 
 const priorities = ["LOW", "MEDIUM", "HIGH", "URGENT"];
 const statuses = ["TODO", "IN_PROGRESS", "DONE"];
+const isAdmin = () => state.user?.role === "ADMIN";
 
 const app = document.querySelector("#app");
 const toast = document.querySelector("#toast");
+
+const applyTheme = () => {
+  document.documentElement.dataset.theme = state.theme;
+};
+
+applyTheme();
 
 const api = async (path, options = {}) => {
   const response = await fetch(path, {
@@ -109,6 +117,13 @@ const setView = async (view) => {
   await hydrate();
 };
 
+const toggleTheme = () => {
+  state.theme = state.theme === "dark" ? "light" : "dark";
+  localStorage.setItem("etharaTheme", state.theme);
+  applyTheme();
+  renderShell();
+};
+
 const hydrate = async () => {
   if (!state.token) {
     renderAuth();
@@ -116,7 +131,7 @@ const hydrate = async () => {
   }
   try {
     const requests = [api("/api/dashboard"), api("/api/projects")];
-    if (state.user?.role === "ADMIN") {
+    if (isAdmin()) {
       requests.push(api("/api/users"));
     }
     const [dashboard, projects, users = []] = await Promise.all(requests);
@@ -140,9 +155,9 @@ const renderAuth = () => {
         <h1>Run projects like a real product team.</h1>
         <p>Ethara Manager brings role-based delivery, team visibility, Kanban task tracking, and executive analytics into one focused workspace.</p>
         <div class="auth-metrics">
-          <span><strong>RBAC</strong> Admin/member workflows</span>
-          <span><strong>JWT</strong> Secure sessions</span>
-          <span><strong>SQL</strong> Real relationships</span>
+          <span><strong>Roles</strong> Admin/member workflows</span>
+          <span><strong>Insights</strong> Delivery analytics</span>
+          <span><strong>Kanban</strong> Visual task tracking</span>
         </div>
       </section>
       <section class="auth-card">
@@ -151,15 +166,9 @@ const renderAuth = () => {
           <button class="tab" data-auth-tab="signup" type="button">Signup</button>
         </div>
         <form id="loginForm" class="auth-form">
-          <label><span>Email</span><input name="email" type="email" value="${adminCredentials.email}" required></label>
-          <label><span>Password</span><input name="password" type="password" value="${adminCredentials.password}" required></label>
+          <label><span>Email</span><input name="email" type="email" placeholder="you@ethara.dev" required></label>
+          <label><span>Password</span><input name="password" type="password" placeholder="Enter password" required></label>
           <button class="primary-btn" type="submit">Login to workspace</button>
-          <div class="credential-box">
-            <span>Admin ID</span>
-            <strong>${adminCredentials.email}</strong>
-            <span>Password</span>
-            <strong>${adminCredentials.password}</strong>
-          </div>
         </form>
         <form id="signupForm" class="auth-form hidden">
           <label><span>Name</span><input name="name" type="text" value="Kaushal Dagur" required></label>
@@ -231,6 +240,10 @@ const renderShell = () => {
         <nav class="nav-list" aria-label="Primary">
           ${views.map(([key, label]) => `<button class="nav-item ${state.view === key ? "active" : ""}" data-view="${key}" type="button">${label}</button>`).join("")}
         </nav>
+        <button class="theme-toggle" data-theme-toggle type="button">
+          <span>${state.theme === "dark" ? "Light mode" : "Dark mode"}</span>
+          <strong>${state.theme === "dark" ? "Light" : "Dark"}</strong>
+        </button>
         <section class="workspace-card">
           <span>Signed in as</span>
           <strong>${escapeHtml(state.user?.name || "User")}</strong>
@@ -245,7 +258,8 @@ const renderShell = () => {
             <h1>${viewTitle()}</h1>
           </div>
           <div class="top-actions">
-            <span class="api-pill">API live</span>
+            <span class="api-pill">Workspace live</span>
+            <input class="global-search" data-global-search value="${escapeHtml(state.search)}" placeholder="Search tasks, projects, people">
             <button class="ghost-btn" data-refresh type="button">Refresh</button>
           </div>
         </header>
@@ -274,33 +288,65 @@ const renderView = () => ({
   settings: renderSettings
 }[state.view] || renderDashboard)();
 
+const renderViewOnly = (focusSelector) => {
+  const viewRoot = document.querySelector("#viewRoot");
+  if (!viewRoot) {
+    return;
+  }
+  viewRoot.innerHTML = renderView();
+  bindViewControls();
+  if (focusSelector) {
+    const field = document.querySelector(focusSelector);
+    field?.focus();
+    if (field?.setSelectionRange) {
+      field.setSelectionRange(field.value.length, field.value.length);
+    }
+  }
+};
+
+const searchTerm = () => state.search.trim().toLowerCase();
+
 const statsCards = () => {
   const stats = state.dashboard.stats;
   return [
-    ["Total Tasks", stats.totalTasks, "Workspace load"],
-    ["Completed", stats.completedTasks, "Delivery wins"],
-    ["Pending", stats.pendingTasks, "Active queue"],
-    ["Overdue", stats.overdueTasks, "Needs attention"]
+    ["Total Tasks", stats.totalTasks, "Workspace load", "total"],
+    ["Completed", stats.completedTasks, "Delivery wins", "done"],
+    ["Pending", stats.pendingTasks, "Active queue", "pending"],
+    ["Overdue", stats.overdueTasks, "Needs attention", "overdue"]
   ].map(([label, value, note]) => `
-    <article class="stat-card"><span>${label}</span><strong>${value}</strong><small>${note}</small></article>
+    <article class="stat-card stat-${note}"><span>${label}</span><strong>${value}</strong><small>${note}</small></article>
   `).join("");
 };
 
 const renderDashboard = () => `
-  <section class="hero-band">
+  <section class="dashboard-hero">
     <div>
       <p class="eyebrow">Premium SaaS workspace</p>
       <h2>Ethara Manager</h2>
-      <p>Role-based project management with delivery analytics, team performance, and a Kanban workflow connected to the backend.</p>
+      <p>Role-based project management with delivery analytics, team performance, and a Kanban workflow for focused execution.</p>
     </div>
-    <div class="hero-stat"><span>Admin ID</span><strong>${adminCredentials.email}</strong><small>${adminCredentials.password}</small></div>
+    <div class="hero-actions">
+      <div class="hero-stat"><span>Active projects</span><strong>${state.projects.length}</strong><small>${filteredTasks().length} visible tasks</small></div>
+      <div class="hero-stat"><span>Completion</span><strong>${completionPercent()}%</strong><small>${state.dashboard.stats.completedTasks} delivered</small></div>
+    </div>
   </section>
   <section class="stats-grid">${statsCards()}</section>
-  <section class="content-grid">
-    <article class="panel board-panel">${boardHeader()}${kanbanBoard(filteredTasks().slice(0, 8), false)}</article>
-    <article class="panel">${panelTitle("Analytics", "Status mix")}${statusBars()}</article>
-    <article class="panel">${panelTitle("Activity", "Recent movement")}${activityList()}</article>
-    <article class="panel">${panelTitle("Team", "Performance")}${teamList()}</article>
+  <section class="summary-grid">
+    <article class="panel summary-panel">${panelTitle("Overview", "Delivery health")}${progressRing()}${statusBars()}</article>
+    <article class="panel summary-panel">${panelTitle("Attention", "Important tasks")}${importantTasks()}</article>
+    <article class="panel summary-panel">${panelTitle("Deadlines", "Next up")}${upcomingList(3)}</article>
+  </section>
+  <section class="dashboard-secondary compact">
+    <article class="panel">${panelTitle("Activity", "Latest updates")}${activityList(3)}</article>
+    <article class="panel dashboard-cta">
+      <p class="eyebrow">Workspace</p>
+      <h3>Open a tab for detailed work</h3>
+      <div class="quick-actions">
+        <button class="ghost-btn" data-view="tasks" type="button">Task board</button>
+        <button class="ghost-btn" data-view="projects" type="button">Projects</button>
+        <button class="ghost-btn" data-view="team" type="button">Team</button>
+      </div>
+    </article>
   </section>
 `;
 
@@ -308,9 +354,9 @@ const renderProjects = () => `
   <section class="split-grid">
     <article class="panel wide">
       ${panelTitle("Projects", "Active delivery spaces")}
-      <div class="project-grid">${state.projects.map(projectCard).join("")}</div>
+      <div class="project-grid">${filteredProjects().map(projectCard).join("") || emptyState("No projects match your search.")}</div>
     </article>
-    ${state.user.role === "ADMIN" ? createProjectForm() : permissionPanel("Only admins can create projects.")}
+    ${isAdmin() ? createProjectForm() : permissionPanel("Only admins can create projects.")}
   </section>
 `;
 
@@ -324,7 +370,7 @@ const renderTasks = () => `
     </div>
     ${kanbanBoard(filteredTasks(), true)}
   </section>
-  ${state.user.role === "ADMIN" ? createTaskForm() : permissionPanel("Members can update only their assigned task progress.")}
+  ${isAdmin() ? createTaskForm() : permissionPanel("Members can update only their assigned task progress.")}
 `;
 
 const renderTeamPage = () => `
@@ -333,7 +379,7 @@ const renderTeamPage = () => `
       ${panelTitle("Team", "Delivery ownership")}
       <div class="team-cards">${teamList(true)}</div>
     </article>
-    ${permissionPanel(state.user.role === "ADMIN" ? "Admin can add members through signup or the users API." : "Your member workspace is scoped to projects and tasks assigned to you.")}
+    ${isAdmin() ? createTeamMemberForm() : permissionPanel("Your member workspace is scoped to projects and tasks assigned to you.")}
   </section>
 `;
 
@@ -345,7 +391,6 @@ const renderSettings = () => `
         <div><span>Name</span><strong>${escapeHtml(state.user.name)}</strong></div>
         <div><span>Email</span><strong>${escapeHtml(state.user.email)}</strong></div>
         <div><span>Role</span><strong>${escapeHtml(state.user.role)}</strong></div>
-        <div><span>Backend</span><strong>Spring Boot + JWT + SQL</strong></div>
       </div>
     </article>
     <article class="panel">
@@ -364,21 +409,57 @@ const boardHeader = () => `
 `;
 
 const filteredTasks = () => (state.dashboard?.tasks || []).filter((task) => {
+  const term = searchTerm();
   const text = `${task.title} ${task.description} ${task.assignedTo.name} ${task.projectName}`.toLowerCase();
-  return (!state.search || text.includes(state.search.toLowerCase()))
+  return (!term || text.includes(term))
     && (state.status === "ALL" || task.status === state.status)
     && (state.priority === "ALL" || task.priority === state.priority)
     && (state.selectedProject === "ALL" || String(task.projectId) === String(state.selectedProject));
 });
 
+const filteredProjects = () => {
+  const term = searchTerm();
+  return state.projects.filter((project) => {
+    const text = `${project.name} ${project.description} ${project.createdBy.name} ${project.members.map((member) => member.name).join(" ")}`.toLowerCase();
+    return !term || text.includes(term);
+  });
+};
+
+const filteredTeamPerformance = () => {
+  const term = searchTerm();
+  return (state.dashboard?.teamPerformance || []).filter((member) => {
+    const user = state.users.find((item) => item.id === member.userId);
+    const text = `${member.name} ${user?.email || ""} ${user?.role || ""}`.toLowerCase();
+    return !term || text.includes(term);
+  });
+};
+
+const filteredUpcomingDeadlines = () => {
+  const term = searchTerm();
+  return (state.dashboard?.upcomingDeadlines || []).filter((item) => {
+    const text = `${item.task} ${item.assignee} ${item.priority}`.toLowerCase();
+    return !term || text.includes(term);
+  });
+};
+
+const filteredActivity = () => {
+  const term = searchTerm();
+  return (state.dashboard?.recentActivity || []).filter((item) => {
+    const text = `${item.message} ${item.tone}`.toLowerCase();
+    return !term || text.includes(term);
+  });
+};
+
+const emptyState = (message) => `<div class="empty-state">${escapeHtml(message)}</div>`;
+
 const kanbanBoard = (tasks, withActions) => `
-  <div class="kanban">
+  <div class="kanban ${withActions ? "kanban-manage" : ""}">
     ${columns.map(([status, label]) => {
       const columnTasks = tasks.filter((task) => task.status === status);
       return `
-        <section class="column">
+        <section class="column" data-drop-status="${status}">
           <div class="column-title"><span>${label}</span><span>${columnTasks.length}</span></div>
-          ${columnTasks.map((task) => taskCard(task, withActions)).join("") || `<span class="pill">No tasks</span>`}
+          <div class="column-dropzone">${columnTasks.map((task) => taskCard(task, withActions)).join("") || `<span class="pill empty-pill">No tasks</span>`}</div>
         </section>
       `;
     }).join("")}
@@ -386,7 +467,7 @@ const kanbanBoard = (tasks, withActions) => `
 `;
 
 const taskCard = (task, withActions) => `
-  <article class="task-card">
+  <article class="task-card" draggable="${withActions ? "true" : "false"}" data-task-id="${task.id}">
     <div class="task-title">${escapeHtml(task.title)}</div>
     <p>${escapeHtml(task.description)}</p>
     <div class="task-meta">
@@ -396,9 +477,12 @@ const taskCard = (task, withActions) => `
     </div>
     <div class="tag-row">${task.tags.map((tag) => `<span class="pill">${escapeHtml(tag)}</span>`).join("")}</div>
     ${withActions ? `
-      <select class="status-select" data-task-status="${task.id}">
-        ${statuses.map((status) => `<option value="${status}" ${task.status === status ? "selected" : ""}>${status}</option>`).join("")}
-      </select>
+      <div class="card-actions">
+        <select class="status-select" data-task-status="${task.id}">
+          ${statuses.map((status) => `<option value="${status}" ${task.status === status ? "selected" : ""}>${status}</option>`).join("")}
+        </select>
+        ${isAdmin() ? `<button class="icon-btn danger" data-delete-task="${task.id}" type="button" title="Delete task">Delete</button>` : ""}
+      </div>
     ` : ""}
   </article>
 `;
@@ -410,17 +494,71 @@ const statusBars = () => {
   `).join("")}</div>`;
 };
 
-const activityList = () => `<div class="activity-list">${state.dashboard.recentActivity.map((item) => `<div class="activity-item">${escapeHtml(item.message)}</div>`).join("")}</div>`;
+const priorityBars = () => {
+  const total = Math.max(state.dashboard.stats.totalTasks, 1);
+  return `<div class="chart-stack">${Object.entries(state.dashboard.tasksByPriority).map(([label, value]) => `
+    <div class="bar-row"><span>${label}</span><span class="bar-track"><span class="bar-fill priority-fill-${label}" style="width:${Math.round((value / total) * 100)}%"></span></span><strong>${value}</strong></div>
+  `).join("")}</div>`;
+};
 
-const teamList = (cards = false) => {
-  const rows = state.dashboard.teamPerformance.map((member) => `
+const importantTasks = () => {
+  const tasks = filteredTasks()
+    .filter((task) => task.priority === "URGENT" || task.priority === "HIGH")
+    .sort((left, right) => left.dueDate.localeCompare(right.dueDate))
+    .slice(0, 3);
+  return `<div class="activity-list">${tasks.map((task) => `
+    <div class="activity-item deadline-item">
+      <strong>${escapeHtml(task.title)}</strong>
+      <span>${escapeHtml(task.assignedTo.name)} · ${task.dueDate}</span>
+      <span class="pill priority-${task.priority}">${task.priority}</span>
+    </div>
+  `).join("") || `<div class="activity-item">No high-priority tasks</div>`}</div>`;
+};
+
+const progressRing = () => {
+  const percent = completionPercent();
+  return `
+    <div class="progress-ring" style="--progress:${percent * 3.6}deg">
+      <strong>${percent}%</strong>
+      <span>complete</span>
+    </div>
+`;
+};
+
+const completionPercent = () => {
+  const stats = state.dashboard.stats;
+  return stats.totalTasks === 0 ? 0 : Math.round((stats.completedTasks / stats.totalTasks) * 100);
+};
+
+const upcomingList = (limit = state.dashboard.upcomingDeadlines.length) => `<div class="activity-list">${filteredUpcomingDeadlines().slice(0, limit).map((item) => `
+  <div class="activity-item deadline-item">
+    <strong>${escapeHtml(item.task)}</strong>
+    <span>${escapeHtml(item.assignee)} · ${item.dueDate}</span>
+    <span class="pill priority-${item.priority}">${item.priority}</span>
+  </div>
+`).join("") || `<div class="activity-item">No upcoming deadlines</div>`}</div>`;
+
+const activityList = (limit = state.dashboard.recentActivity.length) => `<div class="activity-list">${filteredActivity().slice(0, limit).map((item) => `<div class="activity-item">${escapeHtml(item.message)}</div>`).join("") || `<div class="activity-item">No recent activity</div>`}</div>`;
+
+const teamList = (cards = false, limit = Infinity) => {
+  const members = filteredTeamPerformance().slice(0, limit);
+  const rows = members.map((member) => `
     <div class="${cards ? "member-card" : "member-row"}">
       <div class="member-top"><strong>${escapeHtml(member.name)}</strong><span>${member.completionPercent}%</span></div>
       <div class="bar-track"><div class="bar-fill" style="width:${member.completionPercent}%"></div></div>
-      <span class="pill">${member.completedTasks}/${member.taskCount} completed</span>
+      <div class="card-actions">
+        <span class="pill">${member.completedTasks}/${member.taskCount} completed</span>
+        ${cards && canRemoveMember(member.userId) ? `<button class="icon-btn danger" data-delete-user="${member.userId}" type="button" title="Remove member">Remove</button>` : ""}
+      </div>
     </div>
   `).join("");
-  return cards ? rows : `<div class="team-list">${rows}</div>`;
+  const empty = emptyState("No team members match your search.");
+  return cards ? (rows || empty) : `<div class="team-list">${rows || empty}</div>`;
+};
+
+const canRemoveMember = (userId) => {
+  const user = state.users.find((item) => item.id === userId);
+  return isAdmin() && userId !== state.user.id && user?.role === "MEMBER";
 };
 
 const projectCard = (project) => `
@@ -433,6 +571,7 @@ const projectCard = (project) => `
       <span class="pill">${project.members.length} members</span>
       <span class="pill">${project.deadline}</span>
     </div>
+    ${isAdmin() ? `<div class="card-actions"><span class="pill">Owner ${escapeHtml(project.createdBy.name)}</span><button class="icon-btn danger" data-delete-project="${project.id}" type="button" title="Delete project">Delete</button></div>` : ""}
   </article>
 `;
 
@@ -458,7 +597,7 @@ const createTaskForm = () => `
     ${panelTitle("Admin", "Create task")}
     <form id="taskForm" class="form-grid">
       <input name="title" placeholder="Task title" required>
-      <input name="tags" placeholder="Tags: backend, ui">
+      <input name="tags" placeholder="Tags: design, QA">
       <textarea name="description" placeholder="Description" required></textarea>
       <select name="priority">${priorities.map((priority) => `<option>${priority}</option>`).join("")}</select>
       <select name="status">${statuses.map((status) => `<option>${status}</option>`).join("")}</select>
@@ -470,6 +609,19 @@ const createTaskForm = () => `
   </section>
 `;
 
+const createTeamMemberForm = () => `
+  <article class="panel">
+    ${panelTitle("Admin", "Add member")}
+    <form id="memberForm" class="stack-form">
+      <input name="name" placeholder="Full name" required>
+      <input name="email" type="email" placeholder="member@ethara.dev" required>
+      <input name="password" type="password" minlength="6" placeholder="Temporary password" required>
+      <select name="role"><option>MEMBER</option><option>ADMIN</option></select>
+      <button class="primary-btn" type="submit">Add member</button>
+    </form>
+  </article>
+`;
+
 const bindShell = () => {
   document.querySelectorAll("[data-view]").forEach((button) => {
     button.addEventListener("click", () => setView(button.dataset.view));
@@ -477,37 +629,117 @@ const bindShell = () => {
   document.querySelector("#logoutButton")?.addEventListener("click", logout);
   document.querySelector("#settingsLogout")?.addEventListener("click", logout);
   document.querySelector("[data-refresh]")?.addEventListener("click", hydrate);
+  document.querySelector("[data-theme-toggle]")?.addEventListener("click", toggleTheme);
+  document.querySelector("[data-global-search]")?.addEventListener("input", (event) => {
+    state.search = event.target.value;
+    renderViewOnly();
+  });
 
+  bindViewControls();
+};
+
+const bindViewControls = () => {
   document.querySelector("#taskSearch")?.addEventListener("input", (event) => {
     state.search = event.target.value;
-    renderShell();
+    document.querySelector("[data-global-search]").value = state.search;
+    renderViewOnly("#taskSearch");
   });
   document.querySelector("#statusFilter")?.addEventListener("change", (event) => {
     state.status = event.target.value;
-    renderShell();
+    renderViewOnly();
   });
   document.querySelector("#priorityFilter")?.addEventListener("change", (event) => {
     state.priority = event.target.value;
-    renderShell();
+    renderViewOnly();
   });
   document.querySelector("#projectFilter")?.addEventListener("change", (event) => {
     state.selectedProject = event.target.value;
-    renderShell();
+    renderViewOnly();
   });
 
   document.querySelectorAll("[data-task-status]").forEach((select) => {
     select.addEventListener("change", async (event) => {
+      await updateTaskStatus(event.target.dataset.taskStatus, event.target.value);
+    });
+  });
+
+  document.querySelectorAll(".task-card[draggable='true']").forEach((card) => {
+    card.addEventListener("dragstart", (event) => {
+      event.dataTransfer.setData("text/plain", card.dataset.taskId);
+      event.dataTransfer.effectAllowed = "move";
+      card.classList.add("dragging");
+    });
+    card.addEventListener("dragend", () => {
+      card.classList.remove("dragging");
+      document.querySelectorAll(".column").forEach((column) => column.classList.remove("drag-over"));
+    });
+  });
+
+  document.querySelectorAll("[data-drop-status]").forEach((column) => {
+    column.addEventListener("dragover", (event) => {
+      event.preventDefault();
+      column.classList.add("drag-over");
+    });
+    column.addEventListener("dragleave", () => {
+      column.classList.remove("drag-over");
+    });
+    column.addEventListener("drop", async (event) => {
+      event.preventDefault();
+      column.classList.remove("drag-over");
+      const taskId = event.dataTransfer.getData("text/plain");
+      const status = column.dataset.dropStatus;
+      const task = filteredTasks().find((item) => String(item.id) === String(taskId));
+      if (!task || task.status === status) {
+        return;
+      }
+      await updateTaskStatus(taskId, status);
+    });
+  });
+
+  document.querySelectorAll("[data-delete-task]").forEach((button) => {
+    button.addEventListener("click", async () => {
+      if (!confirm("Delete this task permanently?")) {
+        return;
+      }
       try {
-        await api(`/api/tasks/${event.target.dataset.taskStatus}/status`, {
-          method: "PATCH",
-          body: JSON.stringify({ status: event.target.value })
-        });
-        notify("Task status updated", "success");
+        await api(`/api/tasks/${button.dataset.deleteTask}`, { method: "DELETE" });
+        notify("Task deleted", "success");
         await hydrate();
       }
       catch (error) {
         notify(error.message, "error");
+      }
+    });
+  });
+
+  document.querySelectorAll("[data-delete-project]").forEach((button) => {
+    button.addEventListener("click", async () => {
+      if (!confirm("Delete this project and all of its tasks?")) {
+        return;
+      }
+      try {
+        await api(`/api/projects/${button.dataset.deleteProject}`, { method: "DELETE" });
+        notify("Project deleted", "success");
         await hydrate();
+      }
+      catch (error) {
+        notify(error.message, "error");
+      }
+    });
+  });
+
+  document.querySelectorAll("[data-delete-user]").forEach((button) => {
+    button.addEventListener("click", async () => {
+      if (!confirm("Remove this member and their assigned tasks?")) {
+        return;
+      }
+      try {
+        await api(`/api/users/${button.dataset.deleteUser}`, { method: "DELETE" });
+        notify("Team member removed", "success");
+        await hydrate();
+      }
+      catch (error) {
+        notify(error.message, "error");
       }
     });
   });
@@ -558,6 +790,37 @@ const bindShell = () => {
       notify(error.message, "error");
     }
   });
+
+  document.querySelector("#memberForm")?.addEventListener("submit", async (event) => {
+    event.preventDefault();
+    const form = new FormData(event.currentTarget);
+    try {
+      await api("/api/users", {
+        method: "POST",
+        body: JSON.stringify(Object.fromEntries(form))
+      });
+      notify("Team member added", "success");
+      await hydrate();
+    }
+    catch (error) {
+      notify(error.message, "error");
+    }
+  });
+};
+
+const updateTaskStatus = async (taskId, status) => {
+  try {
+    await api(`/api/tasks/${taskId}/status`, {
+      method: "PATCH",
+      body: JSON.stringify({ status })
+    });
+    notify("Task status updated", "success");
+    await hydrate();
+  }
+  catch (error) {
+    notify(error.message, "error");
+    await hydrate();
+  }
 };
 
 if (state.token && state.user) {

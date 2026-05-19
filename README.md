@@ -2,7 +2,7 @@
 
 Collaborate. Track. Deliver.
 
-Ethara Manager is a production-shaped Spring Boot backend for a modern SaaS project management platform. It is designed to support a Linear/ClickUp-style frontend with JWT auth, role-based workflows, project membership, Kanban task management, filtering, and dashboard analytics.
+Ethara Manager is a production-shaped Spring Boot SaaS dashboard for team project management. It includes JWT auth, role-based workflows, project membership, Kanban task management, filtering, dashboard analytics, dark/light themes, and a polished static frontend served by Spring Boot.
 
 ## What Is Built
 
@@ -13,6 +13,9 @@ Ethara Manager is a production-shaped Spring Boot backend for a modern SaaS proj
 - Admin workflows: create projects, manage project members, create/delete tasks
 - Member workflows: view assigned/project work and update own task progress
 - Dashboard data for stat cards, charts, activity feed, deadlines, and team performance
+- Responsive dashboard UI with native drag-and-drop Kanban status updates
+- Dark/light theme toggle with local preference persistence
+- Admin workflows: add/remove team members, create/delete projects, create/delete tasks
 - Seeded demo workspace so the product feels real on first run
 
 ## Demo Accounts
@@ -26,7 +29,7 @@ password123
 | Role | Email |
 | --- | --- |
 | ADMIN | admin@ethara.dev |
-| MEMBER | kaushal@ethara.dev |
+| MEMBER | rohan@ethara.dev |
 | MEMBER | anaya@ethara.dev |
 
 ## Run Locally
@@ -70,7 +73,10 @@ Authenticated:
 Admin only:
 
 - `GET /api/users`
+- `POST /api/users`
+- `DELETE /api/users/{id}`
 - `POST /api/projects`
+- `DELETE /api/projects/{id}`
 - `POST /api/projects/{id}/members`
 - `DELETE /api/projects/{id}/members/{userId}`
 - `POST /api/tasks`
@@ -117,6 +123,41 @@ The dashboard endpoint returns:
 - `recentActivity` for the activity feed
 - `upcomingDeadlines` for deadline cards
 - `teamPerformance` for member progress bars
+
+## Railway + PostgreSQL Deployment
+
+This repo includes:
+
+- `system.properties` for Java 21 on Railway
+- `Procfile` with the production start command
+- PostgreSQL runtime dependency in `pom.xml`
+
+Recommended Railway variables:
+
+```bash
+JDBC_DATABASE_URL=jdbc:postgresql://<host>:<port>/<database>
+JDBC_DATABASE_USERNAME=<postgres-user>
+JDBC_DATABASE_PASSWORD=<postgres-password>
+JDBC_DATABASE_DRIVER=org.postgresql.Driver
+JPA_DDL_AUTO=update
+JWT_SECRET=<long-random-production-secret>
+JWT_TTL_SECONDS=86400
+H2_CONSOLE_ENABLED=false
+```
+
+Railway usually provides database connection values after adding a PostgreSQL service. Convert the URL to JDBC format if needed:
+
+```text
+postgresql://user:pass@host:port/db
+```
+
+becomes:
+
+```text
+jdbc:postgresql://host:port/db
+```
+
+Then put the user and password into `JDBC_DATABASE_USERNAME` and `JDBC_DATABASE_PASSWORD`.
 
 ## Verification
 

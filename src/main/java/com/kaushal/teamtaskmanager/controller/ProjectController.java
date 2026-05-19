@@ -57,4 +57,10 @@ public class ProjectController {
 	public void removeMember(@PathVariable Long id, @PathVariable Long userId) {
 		projectService.removeMember(id, userId);
 	}
+
+	@DeleteMapping("/{id}")
+	@ResponseStatus(HttpStatus.NO_CONTENT)
+	public void delete(@PathVariable Long id) {
+		projectService.delete(id);
+	}
 }
